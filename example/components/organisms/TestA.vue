@@ -7,6 +7,7 @@
     <template v-slot:right>
       <atom-headline />
       <lazy-picture v-bind="$attrs.picture" />
+      <lazy-video />
     </template>
   </layout-two-columns>
 </template>
@@ -14,6 +15,7 @@
 <script>
 import LazyImage from 'lazy-resources/components/LazyImage'
 import LazyPicture from 'lazy-resources/components/LazyPicture'
+import LazyVideo from 'lazy-resources/components/LazyVideo'
 import LayoutTwoColumns from '@/components/layouts/TwoColumns'
 import AtomHeadline from '@/components/atoms/Headline'
 
@@ -24,7 +26,8 @@ export default {
     LayoutTwoColumns,
     AtomHeadline,
     LazyImage,
-    LazyPicture
+    LazyPicture,
+    LazyVideo
   }
 }
 </script>

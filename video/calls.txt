@@ -1,0 +1,308 @@
+# convert to correct mp4
+
+ffmpeg -i ./original.avi -c:a aac -b:a 128k -c:v libx264 -crf 23 original.mp4
+ffmpeg -i ./Sintel.2010.4k.mkv -acodec aac -ac 2 -strict experimental -ab 160k -vcodec libx264 -preset slow -profile:v baseline -level 30 -maxrate 10000000 -bufsize 10000000 -b:v 1200k -f mp4 -threads 0 original.mp4
+
+# export audio
+ffmpeg -i ./original2.avi -q:a 0 -map a audio.mp3
+
+
+
+#Audio
+
+ffmpeg -i ./blueprint.mp4 -vn -acodec libvorbis -ab 128k -dash 1 my_audio.webm
+
+
+#Video
+
+ffmpeg -i ./blueprint.mp4 -c:v libvpx-vp9 -keyint_min 150 -g 150 -tile-columns 4 -frame-parallel 1  -f webm -dash 1 -an -vf scale=160:90 -b:v 250k -dash 1 video_160x90_250k.webm
+
+ffmpeg -i ./blueprint.mp4 -c:v libvpx-vp9 -keyint_min 150 -g 150 -tile-columns 4 -frame-parallel 1  -f webm -dash 1 -an -vf scale=320:180 -b:v 500k -dash 1 video_320x180_500k.webm
+
+ffmpeg -i ./blueprint.mp4 -c:v libvpx-vp9 -keyint_min 150 -g 150 -tile-columns 4 -frame-parallel 1  -f webm -dash 1 -an -vf scale=640:360 -b:v 750k -dash 1 video_640x360_750k.webm
+
+ffmpeg -i ./blueprint.mp4 -c:v libvpx-vp9 -keyint_min 150 -g 150 -tile-columns 4 -frame-parallel 1  -f webm -dash 1 -an -vf scale=640:360 -b:v 1000k -dash 1 video_640x360_1000k.webm
+
+ffmpeg -i ./blueprint.mp4 -c:v libvpx-vp9 -keyint_min 150 -g 150 -tile-columns 4 -frame-parallel 1  -f webm -dash 1 -an -vf scale=1280:720 -b:v 1500k -dash 1 video_1280x720_1500k.webm
+
+#a MPD
+
+ffmpeg \
+  -f webm_dash_manifest -i video_160x90_250k.webm \
+  -f webm_dash_manifest -i video_320x180_500k.webm \
+  -f webm_dash_manifest -i video_640x360_750k.webm \
+  -f webm_dash_manifest -i video_1280x720_1500k.webm \
+  -f webm_dash_manifest -i my_audio.webm \
+  -c copy \
+  -map 0 -map 1 -map 2 -map 3 -map 4 \
+  -f webm_dash_manifest \
+  -adaptation_sets "id=0,streams=0,1,2,3 id=1,streams=4" \
+  my_video_manifest.mpd
+
+
+#c segmented video
+ffmpeg -i ./blueprint.mp4 -codec copy -f dash -min_seg_duration 30 -use_template 1 -use_timeline 1 -init_seg_name '$RepresentationID$-init.m4s' -media_seg_name '$RepresentationID$-$Time$.m4s' manifest.mpd
+
+#d segmented video !!YEAH
+## https://stackoverflow.com/a/56560631
+ffmpeg -i ../blueprint.mp4 \
+  -map 0:v:0 \
+  -map 0:v:0 \
+  -map 0:v:0 \
+  -map 0:v:0 \
+  -map 0:v:0 \
+  -b:v:0 260k -maxrate 260k -bufsize 130k -c:v:0 libx264 -filter:v:0 "scale=-2:240"  \
+  -b:v:1 600k -maxrate 600k -bufsize 300k -c:v:1 libx264 -filter:v:1 "scale=-2:360"  \
+  -b:v:2 1060k -maxrate 1060k -bufsize 530k -c:v:2 libx264 -filter:v:2 "scale=-2:480" \
+  -b:v:3 2400k -maxrate 2400k -bufsize 1200k -c:v:3 libx264 -filter:v:3 "scale=-2:720" \
+  -b:v:4 5300k -maxrate 5300k -bufsize 2650k -c:v:4 libx264 -filter:v:4 "scale=-2:1080" \
+  -seg_duration 1 \
+  -use_template 1 \
+  -use_timeline 1 \
+  -init_seg_name '$RepresentationID$-init.m4s' \
+  -media_seg_name '$RepresentationID$-$Time$.m4s' \
+  -adaptation_sets "id=0,streams=v id=1" \
+  -hls_playlist true \
+  -f dash manifest.mpd
+
+ffmpeg -i ../blueprint.mp4  -map 0:v:0 -map 0:a\?:0 -map 0:v:0 -map 0:a\?:0 -map 0:v:0 -map 0:a\?:0 -map 0:v:0 -map 0:a\?:0 -map 0:v:0 -map 0:a\?:0 -map 0:v:0 -map 0:a\?:0    -b:v:0 350k  -c:v:0 libx264 -filter:v:0 "scale=320:-1"    -b:v:1 1000k -c:v:1 libx264 -filter:v:1 "scale=640:-1"    -b:v:2 3000k -c:v:2 libx264 -filter:v:2 "scale=1280:-1"   -b:v:3 245k  -c:v:3 libvpx-vp9 -filter:v:3 "scale=320:-1"    -b:v:4 700k  -c:v:4 libvpx-vp9 -filter:v:4 "scale=640:-1"    -b:v:5 2100k -c:v:5 libvpx-vp9 -filter:v:5 "scale=1280:-1"    -use_timeline 1 -use_template 1 -window_size 6 -adaptation_sets "id=0,streams=v  id=1,streams=a"   -hls_playlist true -f dash manifest.mpd
+
+# video + audio
+
+ffmpeg -i ../blueprint.mp4 \
+  -map 0:v:0 \
+  -map 0:v:0 \
+  -map 0:a \
+  -b:v:0 260k -maxrate 260k -bufsize 130k -c:v:0 libx264 -filter:v:0 "scale=-2:240"  \
+  -b:a:0 128k -c:a:0 aac \
+  -b:v:1 600k -maxrate 600k -bufsize 300k -c:v:1 libx264 -filter:v:1 "scale=-2:360"  \
+  -b:a 128k -c:a:0 aac \
+  -seg_duration 1 \
+  -use_template 1 \
+  -use_timeline 1 \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ \
+  -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -adaptation_sets "id=0,streams=v id=1,streams=a" \
+  -hls_playlist true \
+  -f dash manifest.mpd
+
+
+ffmpeg -i ../blueprint.mp4 \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map v:0 -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M \
+  -map v:0 -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k \
+  -map 0:a \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -use_template 1 -use_timeline 1  \
+  -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=a \
+  -f dash manifest.mpd
+
+
+ffmpeg -i ../blueprint.mp4 \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map v:0 -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M \
+  -map v:0 -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k \
+  -map a:0 -metadata:s:2 language=eng \
+  -map a:0 -metadata:s:3 language=fre \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -use_template 1 -use_timeline 1  \
+  -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=2 id=2,streams=3" \
+  -f dash manifest.mpd
+
+ffmpeg -i ../blueprint2.mp4 -i ../en.mp3 -i ../es.mp3 -i ../en-descr.mp3\
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map 0:v:0 -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M \
+  -map 0:v:0 -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k \
+  -map 1:a:0 -metadata:s:2 language=eng \
+  -map 2:a:0 -metadata:s:3 language=esp \
+  -map 3:a:0 -metadata:s:4 language=fre \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -use_template 1 -use_timeline 1  \
+  -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=2 id=2,streams=3 id=3,streams=4" \
+  -f dash manifest.mpd
+
+-------------------
+Bento MP4Dash
+-------------------
+ffmpeg -i ../blueprint2.mp4 -i ../en.mp3 -i ../es.mp3 -i ../en-descr.mp3\
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map 0:v:0 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M ./video-960.mp4 \
+  -map 0:v:0 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k ./video-416.mp4 \
+  -map 1:a:0 -metadata:s:2 language=eng ./audio-en.mp4 \
+  -map 2:a:0 -metadata:s:3 language=esp ./audio-es.mp4 \
+  -map 3:a:0 -metadata:s:4 language=fre ./audio-fr.mp4
+
+ffmpeg -i ../blueprint2.mp4 -an -sn -c:0 libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 5300k -maxrate 5300k -bufsize 2650k -vf 'scale=-1:1080' -metadata:s:v:0 title=testA video-1080.mp4
+ffmpeg -i ../blueprint2.mp4 -an -sn -c:0 libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 2400k -maxrate 2400k -bufsize 1200k -vf 'scale=-1:720' -metadata:s:v:0 title=testB video-720.mp4
+ffmpeg -i ../en.mp3 -ac 2 -ab 192k -vn -sn -metadata:s:a:0 language=eng audio-en.mp4
+ffmpeg -i ../es.mp3 -ac 2 -ab 192k -vn -sn -metadata:s:a:0 language=esp audio-es.mp4
+mp4fragment ./video-1080.mp4 tmp-video-1080.mp4
+mp4fragment ./video-720.mp4 tmp-video-720.mp4
+mp4fragment ./audio-en.mp4 tmp-audio-en.mp4
+mp4fragment ./audio-es.mp4 tmp-audio-es.mp4
+mp4dash --mpd-name=manifest.mpd --hls --attributes video:{urn:mpeg:dash:role:2011}viewpoint=vp1 ../tmp-video-1080.mp4 ../tmp-video-720.mp4 ../tmp-audio-en.mp4 ../tmp-audio-es.mp4 \[+format=webvtt,+language=de\]../de.vtt \[+format=webvtt,+language=en\]../en.vtt
+
+
+// Correct version
+
+// source: https://blog.zazu.berlin/internet-programmierung/mpeg-dash-and-hls-adaptive-bitrate-streaming-with-ffmpeg.html
+// -b:v = average bitrate
+// -bufsize = average bitrate * 1.75
+// -maxrate = average bitrate * 1.07
+
+ffmpeg \
+  -y \
+  -i ./original.mp4 \
+  -i ./audio/en.mp3 \
+  -i ./audio/es.mp3 \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 -r 24 \
+  -c:v libx264 -pix_fmt yuv420p \
+  -c:a aac \
+  -map 0:v:0 -f ffmetadata ./prepared/chapters.txt.chap \
+  -map 0:v:0 -b:v 16800k -maxrate 17976k -bufsize 29400k -vf 'scale=3840:-2' ./prepared/video-3840-16800k.mp4 \
+  -map 0:v:0 -b:v 11600k -maxrate 12412k -bufsize 20300k -vf 'scale=3840:-2' ./prepared/video-3840-11600k.mp4 \
+  -map 0:v:0 -b:v 8100k -maxrate 8667k -bufsize 14175k -vf 'scale=2560:-2' ./prepared/video-2560-8100k.mp4 \
+  -map 0:v:0 -b:v 5800k -maxrate 6206k -bufsize 10150k -vf 'scale=-1920:-2' ./prepared/video-1920-5800k.mp4 \
+  -map 0:v:0 -b:v 4500k -maxrate 4815k -bufsize 7875k -vf 'scale=-1920:-2' ./prepared/video-1920-4500k.mp4 \
+  -map 0:v:0 -b:v 3400k -maxrate 3638k -bufsize 5950k -vf 'scale=1280:-2' ./prepared/video-1280-3400k.mp4 \
+  -map 0:v:0 -b:v 2400k -maxrate 2568k -bufsize 4200k -vf 'scale=1280:-2' ./prepared/video-1280-2400k.mp4 \
+  -map 0:v:0 -b:v 1600k -maxrate 1712k -bufsize 2800k -vf 'scale=960:-2' ./prepared/video-960-1600k.mp4 \
+  -map 0:v:0 -b:v 900k -maxrate 963k -bufsize 1575k -vf 'scale=960:-2' ./prepared/video-960-900k.mp4 \
+  -map 0:v:0 -b:v 600k -maxrate 642k -bufsize 1050k -vf 'scale=960:-2' ./prepared/video-960-600k.mp4 \
+  -map 0:v:0 -b:v 300k -maxrate 321k -bufsize 525k -vf 'scale=768:-2' ./prepared/video-768-300k.mp4 \
+  -map 0:v:0 -b:v 145k -maxrate 155k -bufsize 254k -vf 'scale=640:-2' ./prepared/video-640-145k.mp4 \
+  -map 1:a:0 -b:a 192k ./prepared/audio-en-192k.mp4 \
+  -map 1:a:0 -b:a 128k ./prepared/audio-en-128k.mp4 \
+  -map 1:a:0 -b:a 96k ./prepared/audio-en-96k.mp4 \
+  -map 1:a:0 -b:a 48k ./prepared/audio-en-48k.mp4 \
+  -map 2:a:0 -b:a 192k ./prepared/audio-es-192k.mp4 \
+  -map 2:a:0 -b:a 128k ./prepared/audio-es-128k.mp4 \
+  -map 2:a:0 -b:a 96k ./prepared/audio-es-96k.mp4 \
+  -map 2:a:0 -b:a 48k ./prepared/audio-es-48k.mp4
+
+ffmpeg \
+  -y \
+  -i ./original.mp4 \
+  -i ./audio/en.mp3 \
+  -i ./audio/es.mp3 \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 -r 24 \
+  -c:v libx264 -pix_fmt yuv420p \
+  -c:a aac \
+  -map 0:v:0 -f ffmetadata ./prepared/chapters.txt.chap \
+  -map 0:v:0 -b:v 300k -maxrate 321k -bufsize 525k -vf 'scale=768:-2' -metadata:v:0 language=eng ./prepared/video-768-300k.mp4 \
+  -map 0:v:0 -b:v 145k -maxrate 155k -bufsize 254k -vf 'scale=640:-2' ./prepared/video-640-145k.mp4 \
+  -map 1:a:0 -b:a 192k ./prepared/audio-en-192k.mp4 \
+  -map 1:a:0 -b:a 128k ./prepared/audio-en-128k.mp4 \
+  -map 1:a:0 -b:a 96k ./prepared/audio-en-96k.mp4 \
+  -map 1:a:0 -b:a 48k ./prepared/audio-en-48k.mp4 \
+  -map 2:a:0 -b:a 192k ./prepared/audio-es-192k.mp4 \
+  -map 2:a:0 -b:a 128k ./prepared/audio-es-128k.mp4 \
+  -map 2:a:0 -b:a 96k ./prepared/audio-es-96k.mp4 \
+  -map 2:a:0 -b:a 48k ./prepared/audio-es-48k.mp4
+
+
+mp4fragment ./prepared/video-3840-16800k.mp4 ./fragmented/video-3840-16800k.mp4
+mp4fragment ./prepared/video-3840-11600k.mp4 ./fragmented/video-3840-11600k.mp4
+mp4fragment ./prepared/video-2560-8100k.mp4 ./fragmented/video-2560-8100k.mp4
+mp4fragment ./prepared/video-1920-5800k.mp4 ./fragmented/video-1920-5800k.mp4
+mp4fragment ./prepared/video-1920-4500k.mp4 ./fragmented/video-1920-4500k.mp4
+mp4fragment ./prepared/video-1280-3400k.mp4 ./fragmented/video-1280-3400k.mp4
+mp4fragment ./prepared/video-1280-2400k.mp4 ./fragmented/video-1280-2400k.mp4
+mp4fragment ./prepared/video-960-1600k.mp4 ./fragmented/video-960-1600k.mp4
+mp4fragment ./prepared/video-960-900k.mp4 ./fragmented/video-960-900k.mp4
+mp4fragment ./prepared/video-960-600k.mp4 ./fragmented/video-960-600k.mp4
+mp4fragment ./prepared/video-768-300k.mp4 ./fragmented/video-768-300k.mp4
+mp4fragment ./prepared/video-640-145k.mp4 ./fragmented/video-640-145k.mp4
+
+
+mp4dash --attributes video:{urn:mpeg:dash:role:2011}viewpoint=vp1 ./fragmented/video-3840-16800k.mp4
+
+mp4dash --mpd-name=manifest.mpd --hls ./fragmented/video-3840-16800k.mp4 [+role=main]./fragmented/video-3840-11600k.mp4
+mp4dash --mpd-name=manifest.mpd --use-segment-timeline [type=video,+group=1]./fragmented/video-3840-16800k.mp4 [type=video,+group=2]./fragmented/video-3840-11600k.mp4
+
+
+// https://github.com/gpac/gpac/issues/3#issuecomment-64881763
+MP4Box -add ../subtitle/sintel_afr.srt:lang=eng ../prepared/subtitle-afr.mp4
+
+MP4Box \
+  -dash 30000 \
+  -rap \
+  -url-template \
+  ../prepared/video-3840-16800k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-3840-11600k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-2560-8100k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-1920-5800k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-1920-4500k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-1280-3400k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-1280-2400k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-960-1600k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-960-900k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-960-600k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-768-300k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/video-640-145k.mp4#video:role=main:desc_as='<Viewpoint schemeIdUri="urn:mpeg:dash:role:2011" value="landscape"/>' \
+  ../prepared/audio-en-192k.mp4#audio:lang=eng \
+  ../prepared/audio-en-128k.mp4#audio:lang=eng \
+  ../prepared/audio-en-96k.mp4#audio:lang=eng \
+  ../prepared/audio-en-48k.mp4#audio:lang=eng \
+  ../prepared/audio-es-192k.mp4#audio:lang=esp \
+  ../prepared/audio-es-128k.mp4#audio:lang=esp \
+  ../prepared/audio-es-96k.mp4#audio:lang=esp \
+  ../prepared/audio-es-48k.mp4#audio:lang=esp \
+  ../prepared/subtitle-afr.mp4#trackID=1:id=subtitle \
+  -chap ../prepared/chapters.txt.chap \
+  -out manifest.mpd
+
+
+
+
+
+ffmpeg -i ../blueprint2.mp4 -i ../en.mp3 -i ../es.mp3 -i ../en-descr.mp3 -f srt -i ../subtitle/subtitle.en.srt \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map 0:v:0 -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M \
+  -map 0:v:0 -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k \
+  -map 1:a:0 -metadata:s:2 language=eng \
+  -map 2:a:0 -metadata:s:3 language=esp \
+  -map 3:a:0 -metadata:s:4 language=fre \
+  -map 4 -c:s mov_text -metadata:s:s:0 language=ger \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -use_template 1 -use_timeline 1  \
+  -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=2 id=2,streams=3 id=3,streams=4 id=4,streams=5" \
+  -f dash manifest.mpd
+
+ffmpeg -i ../blueprint2.mp4 -i ../en.mp3 -i ../es.mp3 -i ../en-descr.mp3 -sub_charenc UTF-8 -f webvtt -i ../subtitle/de.vtt \
+  -preset veryfast -keyint_min 100 -g 100 -sc_threshold 0 \
+  -r 25 -c:v libx264 -pix_fmt yuv420p -c:a aac -b:a 128k -ac 1 -ar 44100 \
+  -map 0:v:0 -s:0 960x540 -b:v:0 2M -maxrate:0 2.14M -bufsize:0 3.5M \
+  -map 0:v:0 -s:1 416x234 -b:v:1 145k -maxrate:1 155k -bufsize:1 220k \
+  -map 1:a:0 -metadata:s:2 language=eng \
+  -map 2:a:0 -metadata:s:3 language=esp \
+  -map 3:a:0 -metadata:s:4 language=fre \
+  -map 4:s:0 -c:s webvtt -metadata:s:s:0 language=ger  \
+  -init_seg_name init\$RepresentationID\$.\$ext\$ \
+  -media_seg_name chunk\$RepresentationID\$-\$Number%05d\$.\$ext\$ \
+  -use_template 1 -use_timeline 1  \
+  -seg_duration 4 -adaptation_sets "id=0,streams=v id=1,streams=2 id=2,streams=3 id=3,streams=4 id=4,streams=5" \
+  -f dash manifest.mpd
+
+
+
+#e multiple resolutions
+ffmpeg -i ../blueprint.mp4 -c:a aac -ac 2 -ab 128k -vn video-audio.mp4
+ffmpeg -i ../blueprint.mp4 -an -c:v libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 5300k -maxrate 5300k -bufsize 2650k -vf 'scale=-1:1080' video-1080.mp4
+ffmpeg -i ../blueprint.mp4 -an -c:v libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 2400k -maxrate 2400k -bufsize 1200k -vf 'scale=-1:720' video-720.mp4
+ffmpeg -i ../blueprint.mp4 -an -c:v libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 1060k -maxrate 1060k -bufsize 530k -vf 'scale=-1:478' video-480.mp4
+ffmpeg -i ../blueprint.mp4 -an -c:v libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 600k -maxrate 600k -bufsize 300k -vf 'scale=-1:360' video-360.mp4
+ffmpeg -i ../blueprint.mp4 -an -c:v libx264 -x264opts 'keyint=24:min-keyint=24:no-scenecut' -b:v 260k -maxrate 260k -bufsize 130k -vf 'scale=-1:242' video-240.mp4
+
+x264 --fps 24 --preset slow --bitrate 2400 --vbv-maxrate 4800 --vbv-bufsize 9600 --min-keyint 48 --keyint 48 --scenecut 0 --no-scenecut --pass 1 --video-filter "resize:width=1280,height=720" -o intermediate_2400k.264 ./video-1080.mp4
+
+
+ffmpeg -y -i ../blueprint.mp4 -c:v libx264 -x264-params keyint=48:min-keyint=48:scenecut=-1:nal-hrd=cbr -b:v 5300k -bufsize 2650k -maxrate 5300k -profile:v high -level 4.2 -pass 1 -an -f mp4 NUL && ffmpeg -i ../blueprint.mp4 -c:v libx264 -x264-params keyint=48:min-keyint=48:scenecut=-1:nal-hrd=cbr -b:v 5300k -bufsize 2650k -maxrate 5300k -profile:v high -level 4.2 -pass 2 -an source.mp4
+mp4dash --verbose --profiles=on-demand --hls -o ElephantsDream ed_hd_640x360_fragments.mp4 ed_hd_480x270_fragments.mp4 ed_hd_320x180_fragments.mp4 ed_hd_english_fragments.mp4 ed_hd_french_fragments.mp4
+
+mp4fragment --fragment-duration 2000 ed_hd_french.mp4 ed_hd_french_fragments.mp4

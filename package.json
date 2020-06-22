@@ -33,6 +33,7 @@
   },
   "dependencies": {
     "buffer-image-size": "^0.6.4",
+    "dashjs": "^3.1.1",
     "sort-media-queries": "^0.2.2"
   },
   "devDependencies": {
