@@ -41,6 +41,9 @@ jobs:
       - name: Lint (Report Generate)
         run: npm run lint:report
 
+      - name: Jest (Report Generate)
+        run: npm run jest
+
       - name: get-npm-version
         id: package-version
         uses: martinbeentjes/npm-get-version-action@master
@@ -53,6 +56,10 @@ jobs:
             -Dsonar.projectKey=GrabarzUndPartner_nuxt-speedkit
             -Dsonar.eslint.reportPaths=eslint-report.json
             -Dsonar.projectVersion=${{ steps.package-version.outputs.current-version}}
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.testExecutionReportPaths=coverage/jest-report.xml
+            -Dsonar.sources=.
+            -Dsonar.test.inclusions=**/*.test.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
