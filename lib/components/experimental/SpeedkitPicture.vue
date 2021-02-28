@@ -97,27 +97,31 @@ export default {
     async fetchMeta () {
       if (process.server) {
         return await createPlaceholder(this.sources, ({ src, sizes }) => {
+          console.log('getImage', this.$img.getImage(src));
+          console.log('$img', this.$img(src, { width: 30 }));
+          console.log('getSizes', this.$img.getSizes(src, { modifiers: {} }, sizes));
+          this.$img.getMeta(src).then((e) => { console.log('getMeta', e); });
           return Promise.all([
             this.$img(src, { width: 30 }),
-            this.$img.sizes(src, sizes),
+            this.$img.getSizes(src, { modifiers: {} }, sizes),
             this.$img.getMeta(src)
           ]);
         }, this.isCritical);
       } else {
         return createURLPlaceholder(this.sources, ({ src, sizes }) => {
-          return Promise.all([
-            this.$img(src, { width: 30 }),
-            this.$img.sizes(src, sizes)
-          ]);
+          // return Promise.all([
+          //   this.$img(src, { width: 30 }),
+          //   this.$img.sizes(src, sizes)
+          // ]);
         });
       }
     },
 
     getSources () {
-      const formats = getFormats(this.sources)
-        .map(format => this.sources.map(({ src, sizes }) => this.$img.sizes(src, sizes, { format })).flat());
+      // const formats = getFormats(this.sources)
+      //   .map(format => this.sources.map(({ src, sizes }) => this.$img.sizes(src, sizes, { format })).flat());
 
-      return formats.map((sources) => {
+      return [].map((sources) => {
         return {
           srcset: sources.map(({ width, url }) => width ? `${url} ${width}w` : url).join(', '),
           sizes: sources.map(({ width, media }) => media ? `${media} ${width}px` : `${width}px`).reverse().join(', '),
@@ -128,24 +132,24 @@ export default {
   }
 };
 
-function extname (value) {
-  // eslint-disable-next-line security/detect-unsafe-regex
-  const matches = value.match(/\.(?<ext>png|jpe?g)/i);
-  return matches && matches.groups.ext;
-}
+// function extname (value) {
+//   // eslint-disable-next-line security/detect-unsafe-regex
+//   const matches = value.match(/\.(?<ext>png|jpe?g)/i);
+//   return matches && matches.groups.ext;
+// }
 
-function getFormats (sources) {
-  return [...new Set(
-    ['webp']
-      .concat(sources.map(source => extname(source.src) || 'jpg'))
-      .map((format) => {
-        if (format === 'jpeg') {
-          return 'jpg';
-        }
-        return format;
-      })
-  )];
-}
+// function getFormats (sources) {
+//   return [...new Set(
+//     ['webp']
+//       .concat(sources.map(source => extname(source.src) || 'jpg'))
+//       .map((format) => {
+//         if (format === 'jpeg') {
+//           return 'jpg';
+//         }
+//         return format;
+//       })
+//   )];
+// }
 </script>
 
 <style lang="postcss" scoped>

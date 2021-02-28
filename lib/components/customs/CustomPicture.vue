@@ -15,6 +15,8 @@
       :alt="alt"
       :title="title"
       :crossorigin="crossorigin"
+      width="0"
+      height="0"
     >
   </picture>
 </template>

@@ -33,7 +33,7 @@
     "start:generate": "npm run generate && npm run start"
   },
   "dependencies": {
-    "@nuxt/image": "npm:@modified/image@0.0.4-beta4",
+    "@nuxt/image": "^0.3.0",
     "bowser": "2.11.0",
     "browserslist-useragent-regexp": "3.0.0",
     "defu": "3.2.2",
