@@ -47,8 +47,8 @@
   "devDependencies": {
     "pinst": "2.1.6",
     "nuxt": "2.15.7",
-    "@babel/core": "7.14.6",
-    "@babel/preset-env": "7.14.7",
+    "@babel/core": "7.14.8",
+    "@babel/preset-env": "7.14.8",
     "@babel/preset-typescript": "7.14.5",
     "@commitlint/cli": "12.1.4",
     "@commitlint/config-conventional": "12.1.4",
